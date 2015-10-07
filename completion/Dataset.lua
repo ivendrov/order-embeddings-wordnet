@@ -10,11 +10,9 @@ end
 -- dataset creation
 function Dataset:__init(embeddings, hypernyms, method)
     self.method = method
-    self.embeddings = embeddings
     self.hypernyms = hypernyms
     local N_hypernyms = hypernyms:size(1)
     local N_words = embeddings:size(1)
-    self.D_word = embeddings:size(2)
     self.genNegatives = function() return genNegatives(N_hypernyms, N_words, method) end
 
     self:regenNegatives()
@@ -61,9 +59,9 @@ function Dataset:minibatch(size)
 
     self.s = e + 1
 
-    return createInput(self.embeddings, {hyper, hypo}), target
+    return {hyper, hypo}, target
 end
 
 function Dataset:all()
-    return createInput(self.embeddings, {self.hyper, self.hypo}), self.target
+    return {self.hyper, self.hypo}, self.target
 end

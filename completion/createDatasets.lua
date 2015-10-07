@@ -45,6 +45,8 @@ for name, hnyms in pairs(sets) do
     datasets[name] = Dataset(word_embeddings, hnyms, method)
 end
 
+datasets.word_embeddings = word_embeddings
+
 torch.save('dataset/' .. method .. '.t7', datasets)
 
 

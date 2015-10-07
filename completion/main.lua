@@ -23,7 +23,7 @@ local train = datasets.train
 
 local hyperparams = {
     D_embedding = args.d,
-    D_word = train.D_word
+    word_embeddings = datasets.word_embeddings
 }
 
 
