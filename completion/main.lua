@@ -7,6 +7,8 @@ parser:option '--batchsize' :description 'size of minibatch to use' :default "10
 parser:option '--eval_freq' :description 'evaluation frequency' :default "100" :convert(tonumber)
 parser:option '--lr' :description 'learning rate' :default "0.1" :convert(tonumber)
 parser:option '--dataset' :description 'dataset to use' :default 'random'
+parser:option '--margin' :description 'size of margin to use for contrastive learning'
+parser:flag '--symmetric' : description 'use symmetric dot-product distance instance'
 
 USE_CUDA = true
 if USE_CUDA then
@@ -23,7 +25,8 @@ local train = datasets.train
 
 local hyperparams = {
     D_embedding = args.d,
-    word_embeddings = datasets.word_embeddings
+    word_embeddings = datasets.word_embeddings,
+    symmetric = args.symmetric
 }
 
 
@@ -32,7 +35,7 @@ require 'HypernymScore'
 local config = { learningRate = args.lr }
 
 local hypernymNet = nn.HypernymScore(hyperparams)
-local criterion = nn.BCECriterion()
+local criterion = nn.HingeEmbeddingCriterion(args.margin)
 
 ----------------
 -- EVALUATION --
@@ -50,7 +53,7 @@ end
 local function findOptimalThreshold(dataset, model)
     local input, target = cudify(dataset:all())
     local probs = model:forward(input):double()
-    local sortedProbs, indices = torch.sort(probs, 1, true) -- sort in descending order
+    local sortedProbs, indices = torch.sort(probs, 1) -- sort in ascending order
     local sortedTarget = target:index(1, indices:long())
     local tp = torch.cumsum(sortedTarget)
     local invSortedTarget = torch.eq(sortedTarget, 0):double()
@@ -67,7 +70,7 @@ local function evalClassification(dataset, model, threshold)
     local input, target = cudify(dataset:all())
     local probs = model:forward(input):double()
 
-    local inferred = probs:ge(threshold)
+    local inferred = probs:le(threshold)
     local accuracy = inferred:eq(target:byte()):double():mean()
     return accuracy
 end
@@ -79,12 +82,20 @@ end
 --------------
 local parameters, gradients = hypernymNet:getParameters()
 
+local best_accuracy = 0
+local best_count = 0
+local saved_weight
 local count = 1
 while train.epoch <= args.epochs do
     count = count + 1
+
+    if not args.symmetric then
+        hypernymNet.lookupModule.weight:cmax(0) -- make sure weights are positive
+    end
     local function eval(x)
         hypernymNet:zeroGradParameters()
         local input, target = cudify(train:minibatch(args.batchsize))
+        target:mul(2):add(-1) -- convert from 1/0 to 1/-1 convention
         local probs = hypernymNet:forward(input):double()
         local err = criterion:forward(probs, target)
         if count % 10 == 0 then
@@ -101,10 +112,18 @@ while train.epoch <= args.epochs do
         --print("Evaluating:")
         local threshold, accuracy = findOptimalThreshold(datasets.val1, hypernymNet)
         --print("Best accuracy " .. accuracy .. " at threshold " .. threshold)
-        print("Accuracy " .. evalClassification(datasets.val2, hypernymNet, threshold))
+        local real_accuracy = evalClassification(datasets.val2, hypernymNet, threshold)
+        print("Accuracy " .. real_accuracy)
+        if real_accuracy > best_accuracy then
+            best_accuracy = real_accuracy
+            best_count = count
+            saved_weight = hypernymNet.lookupModule.weight:float()
+        end
     end
 end
 
+print("Best accuracy was " .. best_accuracy .. " at batch #" .. best_count)
+torch.save('weights_' .. string.format("%.2f", best_accuracy) .. '.t7', saved_weight)
 
 
 
