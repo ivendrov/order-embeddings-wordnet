@@ -10,6 +10,9 @@ local word_embeddings = f:read('embeddings'):all()
 local D_word = word_embeddings:size(2)
 local in_w2v = f:read('in_w2v'):all():byte()
 local hypernyms = f:read('hypernyms'):all():add(1) -- convert to 1-based indexing
+local entity2word = f:read('entity2word'):all():add(1) -- convert to 1-based indexing
+local slices = f:read('slices'):all():add(1)
+slices[{{}, 2}]:add(-1)
 local N_hypernyms = hypernyms:size(1)
 f:close()
 print("Loaded data")
@@ -42,10 +45,12 @@ local sets = {
 print("Done. Building Datasets ...")
 local datasets = {}
 for name, hnyms in pairs(sets) do
-    datasets[name] = Dataset(word_embeddings, hnyms, method)
+    datasets[name] = Dataset(slices:size(1), hnyms, method)
 end
 
 datasets.word_embeddings = word_embeddings
+datasets.entity2word = entity2word
+datasets.slices = slices
 
 torch.save('dataset/' .. method .. '.t7', datasets)
 

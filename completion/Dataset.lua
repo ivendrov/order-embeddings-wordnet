@@ -1,19 +1,18 @@
 local Dataset = torch.class('Dataset')
 
 
-local function genNegatives(N, N_words, method)
+local function genNegatives(N, N_entities, method)
     if method == 'random' then
-        return torch.rand(N, 2):mul(N_words):ceil():cmax(1):long()
+        return torch.rand(N, 2):mul(N_entities):ceil():cmax(1):long()
     end
 end
 
 -- dataset creation
-function Dataset:__init(embeddings, hypernyms, method)
+function Dataset:__init(N_entities, hypernyms, method)
     self.method = method
     self.hypernyms = hypernyms
     local N_hypernyms = hypernyms:size(1)
-    local N_words = embeddings:size(1)
-    self.genNegatives = function() return genNegatives(N_hypernyms, N_words, method) end
+    self.genNegatives = function() return genNegatives(N_hypernyms, N_entities, method) end
 
     self:regenNegatives()
     self.epoch = 0
@@ -31,12 +30,6 @@ end
 
 function Dataset:size()
     return self.target:size(1)
-end
-
-local function createInput(embeddings, indices)
-    local hyper = indices[1]
-    local hypo = indices[2]
-    return {embeddings:index(1, hyper), embeddings:index(1, hypo)}
 end
 
 function Dataset:minibatch(size)

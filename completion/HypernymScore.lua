@@ -4,11 +4,9 @@ require 'FixedLookupTable'
 
 local HypernymScore, parent = torch.class('nn.HypernymScore', 'nn.Sequential')
 
-function HypernymScore:__init(params, word_embeddings)
+function HypernymScore:__init(params, num_entities)
     parent.__init(self)
-    local we = word_embeddings
-    local lookup = nn.LookupTable(we:size(1), params.D_embedding)
-    --lookup.weight:resizeAs(we):copy(we)
+    local lookup = nn.LookupTable(num_entities, params.D_embedding)
 
     local embedding = nn.Sequential():add(lookup)
     local embedding2 = embedding:sharedClone()
@@ -22,7 +20,10 @@ function HypernymScore:__init(params, word_embeddings)
     else
         self:add(nn.CSubTable())
         self:add(nn.ReLU()) -- i.e. max(0, x)
-        self:add(nn.Mean(2))
+        self:add(nn.Power(2))
+        self:add(nn.Sum(2))
+        self:add(nn.Sqrt())
+        --self:add(nn.Mean(2))
     end
 
     if USE_CUDA then
