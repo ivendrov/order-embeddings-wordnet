@@ -1,5 +1,7 @@
 local argparse = require 'argparse'
 
+torch.manualSeed(1234)
+
 parser = argparse('Train a WordNet completion model')
 parser:option '-d' :description 'dimensionality of embedding space' :default "100" :convert(tonumber)
 parser:option '--epochs' :description 'number of epochs to train for ' :default "1" :convert(tonumber)
@@ -7,6 +9,7 @@ parser:option '--batchsize' :description 'size of minibatch to use' :default "10
 parser:option '--eval_freq' :description 'evaluation frequency' :default "100" :convert(tonumber)
 parser:option '--lr' :description 'learning rate' :default "0.1" :convert(tonumber)
 parser:option '--dataset' :description 'dataset to use' :default 'random'
+parser:option '--name' :description 'name to use' :default 'anon'
 parser:option '--margin' :description 'size of margin to use for contrastive learning'
 parser:flag '--symmetric' : description 'use symmetric dot-product distance instance'
 
@@ -25,16 +28,21 @@ local train = datasets.train
 
 local hyperparams = {
     D_embedding = args.d,
-    word_embeddings = datasets.word_embeddings,
-    symmetric = args.symmetric
+    symmetric = args.symmetric,
+    margin = args.margin,
+    lr = args.lr
 }
 
+local timestampedName = os.date("%Y-%m-%d_%H-%M-%S") .. "_" .. args.name
+
+require 'logger'
+local log = Log(timestampedName, hyperparams, 'vis_training/static', 'Examples Seen', 1)
 
 require 'optim'
 require 'HypernymScore'
 local config = { learningRate = args.lr }
 
-local hypernymNet = nn.HypernymScore(hyperparams)
+local hypernymNet = nn.HypernymScore(hyperparams, datasets.word_embeddings)
 local criterion = nn.HingeEmbeddingCriterion(args.margin)
 
 ----------------
@@ -100,6 +108,7 @@ while train.epoch <= args.epochs do
         local err = criterion:forward(probs, target)
         if count % 10 == 0 then
             print("Epoch " .. train.epoch .. " Batch " .. count .. " Error " .. err)
+            log:update({Error = err}, count*args.batchsize)
         end
         local gProbs = criterion:backward(probs, target):cuda()
         local _ = hypernymNet:backward(input, gProbs)
@@ -114,6 +123,7 @@ while train.epoch <= args.epochs do
         --print("Best accuracy " .. accuracy .. " at threshold " .. threshold)
         local real_accuracy = evalClassification(datasets.val2, hypernymNet, threshold)
         print("Accuracy " .. real_accuracy)
+        log:update({Accuracy = real_accuracy}, count * args.batchsize)
         if real_accuracy > best_accuracy then
             best_accuracy = real_accuracy
             best_count = count
@@ -123,7 +133,7 @@ while train.epoch <= args.epochs do
 end
 
 print("Best accuracy was " .. best_accuracy .. " at batch #" .. best_count)
-torch.save('weights_' .. string.format("%.2f", best_accuracy) .. '.t7', saved_weight)
+--torch.save('weights_' .. string.format("%.2f", best_accuracy) .. '.t7', saved_weight)
 
 
 
