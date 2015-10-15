@@ -52,7 +52,20 @@ datasets.word_embeddings = word_embeddings
 datasets.entity2word = entity2word
 datasets.slices = slices
 
+
+-- save visualization info
+local paths = require 'paths'
+local json = require 'cjson'
+local function write_json(file, t)
+    local filename = file .. '.json'
+    paths.mkdir(paths.dirname(filename))
+    local f = io.open(filename, 'w')
+    f:write(json.encode(t))
+    f:close()
+end
+
 torch.save('dataset/' .. method .. '.t7', datasets)
+write_json('vis/static/' .. method .. '/hypernyms', datasets.train.hypernyms:totable())
 
 
 

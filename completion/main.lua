@@ -12,6 +12,7 @@ parser:option '--dataset' :description 'dataset to use' :default 'random'
 parser:option '--name' :description 'name to use' :default 'anon'
 parser:option '--margin' :description 'size of margin to use for contrastive learning'
 parser:flag '--symmetric' : description 'use symmetric dot-product distance instance'
+parser:flag '--vis' :description 'save visualization info'
 
 USE_CUDA = true
 if USE_CUDA then
@@ -42,7 +43,7 @@ require 'optim'
 require 'HypernymScore'
 local config = { learningRate = args.lr }
 
-local hypernymNet = nn.HypernymScore(hyperparams, datasets.word_embeddings)
+local hypernymNet = nn.HypernymScore(hyperparams, datasets.slices:size(1))
 local criterion = nn.HingeEmbeddingCriterion(args.margin)
 
 ----------------
@@ -108,6 +109,13 @@ while train.epoch <= args.epochs do
         local err = criterion:forward(probs, target)
         if count % 10 == 0 then
             print("Epoch " .. train.epoch .. " Batch " .. count .. " Error " .. err)
+            print("Inputs:")
+            local i1 = hypernymNet.lookupModule.weight[input[1][1]]
+            local i2 = hypernymNet.lookupModule.weight[input[2][1]]
+            print(i1)
+            print(i2)
+            print(torch.cmax(i1 - i2, 0))
+            print("Prob: " .. probs[1])
             log:update({Error = err}, count*args.batchsize)
         end
         local gProbs = criterion:backward(probs, target):cuda()
@@ -133,7 +141,39 @@ while train.epoch <= args.epochs do
 end
 
 print("Best accuracy was " .. best_accuracy .. " at batch #" .. best_count)
---torch.save('weights_' .. string.format("%.2f", best_accuracy) .. '.t7', saved_weight)
+
+if args.vis then
+    local index = {}
+    index.stats = {{ name = "Accuracy", value = best_accuracy }}
+    index.hyperparams = hyperparams
+    index.embeddings = saved_weight:totable()
+
+    local paths = require 'paths'
+    local json = require 'cjson'
+    local function write_json(file, t)
+        local filename = file .. '.json'
+        paths.mkdir(paths.dirname(filename))
+        local f = io.open(filename, 'w')
+        f:write(json.encode(t))
+        f:close()
+    end
+
+    local saveDir = paths.concat('vis', 'static')
+    write_json(paths.concat(saveDir, args.dataset, timestampedName, 'index'), index)
+
+    -- update index file
+    local indexLoc = paths.concat(saveDir, 'index')
+
+    local all_models = {}
+    for d in paths.iterdirs(saveDir) do
+        local models = {}
+        for f in paths.iterdirs(paths.concat(saveDir, d)) do
+            table.insert(models, f)
+        end
+        all_models[d] = models
+    end
+    write_json(indexLoc, all_models)
+end
 
 
 
