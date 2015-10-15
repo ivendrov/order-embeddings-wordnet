@@ -1,7 +1,7 @@
 require 'Dataset'
 
 torch.manualSeed(1234)
-local method = 'random'
+local method = 'contrastive'
 
 local hdf5 = require 'hdf5'
 

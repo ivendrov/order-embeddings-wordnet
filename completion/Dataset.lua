@@ -1,9 +1,18 @@
 local Dataset = torch.class('Dataset')
 
 
-local function genNegatives(N, N_entities, method)
+local function genNegatives(hypernyms, N_entities, method)
     if method == 'random' then
-        return torch.rand(N, 2):mul(N_entities):ceil():cmax(1):long()
+        return torch.rand(hypernyms:size(1), 2):mul(N_entities):ceil():cmax(1):long()
+    elseif method == 'contrastive' then
+        -- following Socher, randomly change one of the members of each pair, to a different entity
+        --local randomEntities = torch.rand(hypernyms:size(1), 1):mul(N_entities):ceil():cmax(1):long()
+        --local index = torch.rand(hypernyms:size(1), 1):mul(2):ceil():cmax(1):long() -- indices, between 1 and 2
+        --local negatives = hypernyms:clone()
+       -- negatives:scatter(2, index, randomEntities)
+        local negatives = hypernyms:clone()
+        negatives[{{}, 1}] = negatives[{{}, 1}]:index(1, torch.randperm(hypernyms:size(1)):long())
+        return negatives
     end
 end
 
@@ -12,7 +21,7 @@ function Dataset:__init(N_entities, hypernyms, method)
     self.method = method
     self.hypernyms = hypernyms
     local N_hypernyms = hypernyms:size(1)
-    self.genNegatives = function() return genNegatives(N_hypernyms, N_entities, method) end
+    self.genNegatives = function() return genNegatives(hypernyms, N_entities, method) end
 
     self:regenNegatives()
     self.epoch = 0

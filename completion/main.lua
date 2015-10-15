@@ -109,13 +109,6 @@ while train.epoch <= args.epochs do
         local err = criterion:forward(probs, target)
         if count % 10 == 0 then
             print("Epoch " .. train.epoch .. " Batch " .. count .. " Error " .. err)
-            print("Inputs:")
-            local i1 = hypernymNet.lookupModule.weight[input[1][1]]
-            local i2 = hypernymNet.lookupModule.weight[input[2][1]]
-            print(i1)
-            print(i2)
-            print(torch.cmax(i1 - i2, 0))
-            print("Prob: " .. probs[1])
             log:update({Error = err}, count*args.batchsize)
         end
         local gProbs = criterion:backward(probs, target):cuda()
