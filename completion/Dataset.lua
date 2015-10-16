@@ -17,11 +17,11 @@ local function genNegatives(hypernyms, N_entities, method)
 end
 
 -- dataset creation
-function Dataset:__init(N_entities, hypernyms, method)
+function Dataset:__init(N_entities, hypernyms, method, negatives)
     self.method = method
     self.hypernyms = hypernyms
     local N_hypernyms = hypernyms:size(1)
-    self.genNegatives = function() return genNegatives(hypernyms, N_entities, method) end
+    self.genNegatives = function() return negatives end
 
     self:regenNegatives()
     self.epoch = 0

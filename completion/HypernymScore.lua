@@ -19,6 +19,7 @@ function HypernymScore:__init(params, num_entities)
         self:add(nn.MulConstant(0.5))
     else
         self:add(nn.CSubTable())
+        self:add(nn.AddConstant(0.1))
         self:add(nn.ReLU()) -- i.e. max(0, x)
         self:add(nn.Power(2))
         self:add(nn.Sum(2))

@@ -1,8 +1,9 @@
 local argparse = require 'argparse'
 
-torch.manualSeed(1234)
+
 
 parser = argparse('Train a WordNet completion model')
+parser:option '--seed' :description 'random seed' : default '1234' :convert(tonumber)
 parser:option '-d' :description 'dimensionality of embedding space' :default "100" :convert(tonumber)
 parser:option '--epochs' :description 'number of epochs to train for ' :default "1" :convert(tonumber)
 parser:option '--batchsize' :description 'size of minibatch to use' :default "1000" :convert(tonumber)
@@ -14,6 +15,7 @@ parser:option '--margin' :description 'size of margin to use for contrastive lea
 parser:flag '--symmetric' : description 'use symmetric dot-product distance instance'
 parser:flag '--vis' :description 'save visualization info'
 
+
 USE_CUDA = true
 if USE_CUDA then
     require 'cutorch'
@@ -21,6 +23,7 @@ if USE_CUDA then
 end
 
 local args = parser:parse()
+torch.manualSeed(args.seed)
 
 require 'Dataset'
 local datasets = torch.load('dataset/' .. args.dataset .. '.t7')
@@ -69,8 +72,9 @@ local function findOptimalThreshold(dataset, model)
     local Nneg = invSortedTarget:sum() -- number of negatives
     local fp = torch.cumsum(invSortedTarget)
     local tn = fp:mul(-1):add(Nneg)
-    local accuracies = tp:add(tn):div(sortedTarget:size(1))
+    local accuracies = torch.add(tp,tn):div(sortedTarget:size(1))
     local bestAccuracy, i = torch.max(accuracies, 1)
+    print("Number of positives, negatives, tp, tn: " .. target:sum() .. ' ' .. Nneg .. ' ' .. tp[i[1]] .. ' ' .. tn[i[1]] )
     return sortedProbs[i[1]], bestAccuracy[1]
 end
 
@@ -134,6 +138,7 @@ while train.epoch <= args.epochs do
 end
 
 print("Best accuracy was " .. best_accuracy .. " at batch #" .. best_count)
+torch.save('weights.t7', saved_weight)
 
 if args.vis then
     local index = {}
