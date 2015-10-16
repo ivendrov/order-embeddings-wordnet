@@ -12,6 +12,8 @@ parser:option '--lr' :description 'learning rate' :default "0.1" :convert(tonumb
 parser:option '--dataset' :description 'dataset to use' :default 'random'
 parser:option '--name' :description 'name to use' :default 'anon'
 parser:option '--margin' :description 'size of margin to use for contrastive learning'
+parser:option '--norm' :description 'norm to use, "inf" for infinity' :default "2" :convert(tonumber)
+parser:option '--eps' :description 'constant to use to prevent hypernyms from being mapped to the exact same spot' :default "0" :convert(tonumber)
 parser:flag '--symmetric' : description 'use symmetric dot-product distance instance'
 parser:flag '--vis' :description 'save visualization info'
 
@@ -34,7 +36,9 @@ local hyperparams = {
     D_embedding = args.d,
     symmetric = args.symmetric,
     margin = args.margin,
-    lr = args.lr
+    lr = args.lr,
+    norm = math.min(9999, args.norm),
+    eps = args.eps
 }
 
 local timestampedName = os.date("%Y-%m-%d_%H-%M-%S") .. "_" .. args.name

@@ -19,12 +19,17 @@ function HypernymScore:__init(params, num_entities)
         self:add(nn.MulConstant(0.5))
     else
         self:add(nn.CSubTable())
-        self:add(nn.AddConstant(0.1))
-        self:add(nn.ReLU()) -- i.e. max(0, x)
-        self:add(nn.Power(2))
-        self:add(nn.Sum(2))
-        self:add(nn.Sqrt())
-        --self:add(nn.Mean(2))
+        self:add(nn.AddConstant(params.eps))
+        self:add(nn.ReLU())
+        if params.norm > 1000 then
+            self:add(nn.Max(2))
+        elseif params.norm == 2 then
+            self:add(nn.Power(2))
+            self:add(nn.Sum(2))
+            self:add(nn.Sqrt())
+        elseif params.norm == 1 then
+            self:add(nn.Mean(2))
+        end
     end
 
     if USE_CUDA then
