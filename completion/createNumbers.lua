@@ -5,7 +5,7 @@ local method = 'numbers'
 
 
 
-local nEntities = 100
+local nEntities = 1000
 
 local hypernyms = {}
 local negatives = {}
