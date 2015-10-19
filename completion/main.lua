@@ -9,7 +9,8 @@ parser:option '--epochs' :description 'number of epochs to train for ' :default 
 parser:option '--batchsize' :description 'size of minibatch to use' :default "1000" :convert(tonumber)
 parser:option '--eval_freq' :description 'evaluation frequency' :default "100" :convert(tonumber)
 parser:option '--lr' :description 'learning rate' :default "0.1" :convert(tonumber)
-parser:option '--dataset' :description 'dataset to use' :default 'random'
+parser:option '--train' :description 'dataset to use for training' :default 'random'
+parser:option '--eval' :description 'dataset to use for evaluation' :args('*')
 parser:option '--name' :description 'name to use' :default 'anon'
 parser:option '--margin' :description 'size of margin to use for contrastive learning'
 parser:option '--norm' :description 'norm to use, "inf" for infinity' :default "2" :convert(tonumber)
@@ -25,10 +26,17 @@ if USE_CUDA then
 end
 
 local args = parser:parse()
+if not args.eval then
+    args.eval = {args.train}
+end
 torch.manualSeed(args.seed)
 
 require 'Dataset'
-local datasets = torch.load('dataset/' .. args.dataset .. '.t7')
+local datasets = torch.load('dataset/' .. args.train .. '.t7')
+local datasets_eval = {}
+for _, name in ipairs(args.eval) do
+    datasets_eval[name] = torch.load('dataset/' .. name .. '.t7')
+end
 local train = datasets.train
 
 
@@ -99,8 +107,8 @@ end
 --------------
 local parameters, gradients = hypernymNet:getParameters()
 
-local best_accuracy = 0
-local best_count = 0
+local best_accuracies = {}
+local best_counts = {}
 local saved_weight
 local count = 1
 while train.epoch <= args.epochs do
@@ -128,20 +136,26 @@ while train.epoch <= args.epochs do
 
     if count % args.eval_freq == 0 then
         --print("Evaluating:")
-        local threshold, accuracy = findOptimalThreshold(datasets.val1, hypernymNet)
-        --print("Best accuracy " .. accuracy .. " at threshold " .. threshold)
-        local real_accuracy = evalClassification(datasets.val2, hypernymNet, threshold)
-        print("Accuracy " .. real_accuracy)
-        log:update({Accuracy = real_accuracy}, count * args.batchsize)
-        if real_accuracy > best_accuracy then
-            best_accuracy = real_accuracy
-            best_count = count
-            saved_weight = hypernymNet.lookupModule.weight:float()
+        for name, dataset in pairs(datasets_eval) do
+            local threshold, accuracy = findOptimalThreshold(dataset.val1, hypernymNet)
+            --print("Best accuracy " .. accuracy .. " at threshold " .. threshold)
+            local real_accuracy = evalClassification(dataset.val2, hypernymNet, threshold)
+            print(name .. " Accuracy " .. real_accuracy)
+            log:update({[name .. "Accuracy"] = real_accuracy}, count * args.batchsize)
+            if not best_accuracies[name] or real_accuracy > best_accuracies[name] then
+                best_accuracies[name] = real_accuracy
+                best_counts[name] = count
+                saved_weight = hypernymNet.lookupModule.weight:float()
+            end
         end
     end
 end
 
-print("Best accuracy was " .. best_accuracy .. " at batch #" .. best_count)
+local pretty = require 'pl.pretty'
+print("Best accuracy was at batch #" )
+print(pretty.write(best_counts,""))
+print(pretty.write(best_accuracies,""))
+
 torch.save('weights.t7', saved_weight)
 
 if args.vis then
@@ -161,7 +175,7 @@ if args.vis then
     end
 
     local saveDir = paths.concat('vis', 'static')
-    write_json(paths.concat(saveDir, args.dataset, timestampedName, 'index'), index)
+    write_json(paths.concat(saveDir, args.eval, timestampedName, 'index'), index)
 
     -- update index file
     local indexLoc = paths.concat(saveDir, 'index')

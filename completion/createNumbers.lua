@@ -1,7 +1,6 @@
 require 'Dataset'
 
 torch.manualSeed(1234)
-local method = 'numbers'
 
 
 
@@ -31,41 +30,46 @@ print("Number of hypernyms " .. N_hypernyms)
 
 local splitSize = 50
 
--- shuffle randomly
-local order = torch.randperm(N_hypernyms):long()
-local hypernyms = hypernyms:index(1, order)
-print("Building sets ...")
-local sets = {
-    val1 = hypernyms,
-    val2 = hypernyms,
-    train = hypernyms
-}
-print("Done. Building Datasets ...")
-local datasets = {}
-for name, hnyms in pairs(sets) do
-    datasets[name] = Dataset(nEntities, hnyms, method, negatives)
+for _, method in ipairs{'contrastive'} do
+
+    -- shuffle randomly
+    local order = torch.randperm(N_hypernyms):long()
+    local hypernyms = hypernyms:index(1, order)
+    print("Building sets ...")
+    local sets = {
+        val1 = hypernyms,
+        val2 = hypernyms,
+        train = hypernyms
+    }
+    print("Done. Building Datasets ...")
+    local datasets = {}
+    for name, hnyms in pairs(sets) do
+        datasets[name] = Dataset(nEntities, hnyms, method, negatives)
+    end
+
+    datasets.slices = torch.ones(nEntities)
+
+
+    -- save visualization info
+    local paths = require 'paths'
+    local json = require 'cjson'
+    local function write_json(file, t)
+        local filename = file .. '.json'
+        paths.mkdir(paths.dirname(filename))
+        local f = io.open(filename, 'w')
+        f:write(json.encode(t))
+        f:close()
+    end
+
+    local names = {}
+    for i = 1, nEntities do
+        table.insert(names, tostring(i))
+    end
+
+    local methodName = 'numbers_' .. method
+
+    torch.save('dataset/' .. methodName .. '.t7', datasets)
+    write_json('vis/static/' .. methodName .. '/hypernyms', datasets.train.hypernyms:totable())
+    write_json('vis/static/' .. methodName .. '/synset_names', names)
 end
-
-datasets.slices = torch.ones(nEntities)
-
-
--- save visualization info
-local paths = require 'paths'
-local json = require 'cjson'
-local function write_json(file, t)
-    local filename = file .. '.json'
-    paths.mkdir(paths.dirname(filename))
-    local f = io.open(filename, 'w')
-    f:write(json.encode(t))
-    f:close()
-end
-
-local names = {}
-for i = 1, nEntities do
-    table.insert(names, tostring(i))
-end
-
-torch.save('dataset/' .. method .. '.t7', datasets)
-write_json('vis/static/' .. method .. '/hypernyms', datasets.train.hypernyms:totable())
-write_json('vis/static/' .. method .. '/synset_names', names)
 

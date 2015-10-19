@@ -16,20 +16,23 @@ local function correctNegatives(negatives, N_entities)
     return negatives
 end
 
-local function genNegatives(hypernyms, N_entities, method)
+local function genNegatives(N_entities, hypernyms, method, negatives)
+    local negatives = negatives
     if method == 'random' then
-        local negatives =  torch.rand(hypernyms:size(1), 2):mul(N_entities):ceil():cmax(1):long()
-        return correctNegatives(negatives, N_entities)
+        negatives =  torch.rand(hypernyms:size(1), 2):mul(N_entities):ceil():cmax(1):long()
     elseif method == 'contrastive' then
         -- following Socher, randomly change one of the members of each pair, to a different entity
-        --local randomEntities = torch.rand(hypernyms:size(1), 1):mul(N_entities):ceil():cmax(1):long()
-        --local index = torch.rand(hypernyms:size(1), 1):mul(2):ceil():cmax(1):long() -- indices, between 1 and 2
-        --local negatives = hypernyms:clone()
-       -- negatives:scatter(2, index, randomEntities)
-        local negatives = hypernyms:clone()
-        negatives[{{}, 1}] = negatives[{{}, 1}]:index(1, torch.randperm(hypernyms:size(1)):long())
-        return correctNegatives(negatives, N_entities)
+        local randomEntities = torch.rand(hypernyms:size(1), 1):mul(N_entities):ceil():cmax(1):long()
+        local index = torch.rand(hypernyms:size(1), 1):mul(2):ceil():cmax(1):long() -- indices, between 1 and 2
+        negatives = hypernyms:clone()
+        negatives:scatter(2, index, randomEntities)
+    elseif method == 'sample' then
+         local s = 1
+         local e = hypernyms:size(1)
+         local indices = torch.randperm(negatives:size(1)):long()[{{s,e}}]
+         negatives = negatives:index(1, indices)
     end
+    return correctNegatives(negatives, N_entities)
 end
 
 -- dataset creation
@@ -37,7 +40,9 @@ function Dataset:__init(N_entities, hypernyms, method, negatives)
     self.method = method
     self.hypernyms = hypernyms
     local N_hypernyms = hypernyms:size(1)
-    self.genNegatives = function() return genNegatives(hypernyms, N_entities, 'random') end
+
+    self.negativesCounter = 1
+    self.genNegatives = function() return genNegatives(N_entities, hypernyms, method, negatives) end
 
     self:regenNegatives()
     self.epoch = 0
