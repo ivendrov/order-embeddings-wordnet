@@ -1,7 +1,7 @@
 require 'Dataset'
 
 torch.manualSeed(1234)
-local method = 'random'
+local method = 'contrastive'
 
 local hdf5 = require 'hdf5'
 
@@ -9,7 +9,7 @@ local f = hdf5.open('dataset/wordnet.h5', 'r')
 local word_embeddings = f:read('embeddings'):all()
 local D_word = word_embeddings:size(2)
 local in_w2v = f:read('in_w2v'):all():byte()
-local originalHypernyms = f:read('hypernyms'):all():add(1) -- convert to 1-based indexing
+local originalHypernyms = f:read('holonyms'):all():add(1) -- convert to 1-based indexing
 local entity2word = f:read('entity2word'):all():add(1) -- convert to 1-based indexing
 local slices = f:read('slices'):all():add(1)
 slices[{{}, 2}]:add(-1)
