@@ -1,20 +1,7 @@
 local Dataset = torch.class('Dataset')
 
 
-local function correctNegatives(negatives, N_entities)
-    for i = 1, negatives:size(1) do
-        local neg = negatives[i]
-        -- correct false negatives
-        if neg[1] % neg[2] == 0 then
-            local index = math.ceil(torch.uniform() * 2 + 0.0000001)
-            neg[index] = neg[index] + 1
-            if neg[index] > N_entities then
-                neg[index] = 1
-            end
-        end
-    end
-    return negatives
-end
+
 
 local function genNegatives(N_entities, hypernyms, method, negatives)
     local negatives = negatives
@@ -32,7 +19,7 @@ local function genNegatives(N_entities, hypernyms, method, negatives)
          local indices = torch.randperm(negatives:size(1)):long()[{{s,e}}]
          negatives = negatives:index(1, indices)
     end
-    return correctNegatives(negatives, N_entities)
+    return negatives
 end
 
 -- dataset creation
