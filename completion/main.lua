@@ -115,7 +115,8 @@ while train.epoch <= args.epochs do
     count = count + 1
 
     if not args.symmetric then
-        hypernymNet.lookupModule.weight:cmax(0) -- make sure weights are positive
+        local weight = hypernymNet.lookupModule.weight
+        weight:cmax(0) -- make sure weights are positive
     end
     local function eval(x)
         hypernymNet:zeroGradParameters()
@@ -159,36 +160,38 @@ print(pretty.write(best_accuracies,""))
 torch.save('weights.t7', saved_weight)
 
 if args.vis then
-    local index = {}
-    index.stats = {{ name = "Accuracy", value = best_accuracy }}
-    index.hyperparams = hyperparams
-    index.embeddings = saved_weight:totable()
+    for name, dataset in pairs(datasets_eval) do
+        local index = {}
+        index.stats = {{ name = "Accuracy", value = best_accuracies[name] }}
+        index.hyperparams = hyperparams
+        index.embeddings = saved_weight:totable()
 
-    local paths = require 'paths'
-    local json = require 'cjson'
-    local function write_json(file, t)
-        local filename = file .. '.json'
-        paths.mkdir(paths.dirname(filename))
-        local f = io.open(filename, 'w')
-        f:write(json.encode(t))
-        f:close()
-    end
-
-    local saveDir = paths.concat('vis', 'static')
-    write_json(paths.concat(saveDir, args.eval, timestampedName, 'index'), index)
-
-    -- update index file
-    local indexLoc = paths.concat(saveDir, 'index')
-
-    local all_models = {}
-    for d in paths.iterdirs(saveDir) do
-        local models = {}
-        for f in paths.iterdirs(paths.concat(saveDir, d)) do
-            table.insert(models, f)
+        local paths = require 'paths'
+        local json = require 'cjson'
+        local function write_json(file, t)
+            local filename = file .. '.json'
+            paths.mkdir(paths.dirname(filename))
+            local f = io.open(filename, 'w')
+            f:write(json.encode(t))
+            f:close()
         end
-        all_models[d] = models
+
+        local saveDir = paths.concat('vis', 'static')
+        write_json(paths.concat(saveDir, name, timestampedName, 'index'), index)
+
+        -- update index file
+        local indexLoc = paths.concat(saveDir, 'index')
+
+        local all_models = {}
+        for d in paths.iterdirs(saveDir) do
+            local models = {}
+            for f in paths.iterdirs(paths.concat(saveDir, d)) do
+                table.insert(models, f)
+            end
+            all_models[d] = models
+        end
+        write_json(indexLoc, all_models)
     end
-    write_json(indexLoc, all_models)
 end
 
 
