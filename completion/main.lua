@@ -138,9 +138,9 @@ while train.epoch <= args.epochs do
     if count % args.eval_freq == 0 then
         --print("Evaluating:")
         for name, dataset in pairs(datasets_eval) do
-            local threshold, accuracy = findOptimalThreshold(dataset.val1, hypernymNet)
+            local threshold, accuracy = findOptimalThreshold(dataset.val, hypernymNet)
             --print("Best accuracy " .. accuracy .. " at threshold " .. threshold)
-            local real_accuracy = evalClassification(dataset.val2, hypernymNet, threshold)
+            local real_accuracy = evalClassification(dataset.test, hypernymNet, threshold)
             print(name .. " Accuracy " .. real_accuracy)
             log:update({[name .. "Accuracy"] = real_accuracy}, count * args.batchsize)
             if not best_accuracies[name] or real_accuracy > best_accuracies[name] then

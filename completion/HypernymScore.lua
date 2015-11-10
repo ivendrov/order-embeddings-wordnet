@@ -26,7 +26,6 @@ function HypernymScore:__init(params, num_entities)
         elseif params.norm == 2 then
             self:add(nn.Power(2))
             self:add(nn.Sum(2))
-            self:add(nn.Sqrt())
         elseif params.norm == 1 then
             self:add(nn.Mean(2))
         end

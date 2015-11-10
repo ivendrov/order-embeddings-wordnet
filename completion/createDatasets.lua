@@ -1,7 +1,7 @@
 require 'Dataset'
 
 torch.manualSeed(1234)
-local method = 'random'
+local method = 'contrastive'
 
 local hdf5 = require 'hdf5'
 
@@ -53,9 +53,8 @@ for _, overfit in ipairs{true, false} do
         else
             sets = {
                 test = hypernyms:narrow(1, 1, splitSize),
-                val1 = hypernyms:narrow(1, splitSize + 1, splitSize),
-                val2 = hypernyms:narrow(1, splitSize*2 + 1, splitSize),
-                train = hypernyms:narrow(1, splitSize*3+ 1, N_hypernyms - 3*splitSize)
+                val = hypernyms:narrow(1, splitSize + 1, splitSize),
+                train = hypernyms:narrow(1, splitSize*2+ 1, N_hypernyms - 2*splitSize)
             }
         end
         print("Done. Building Datasets ...")
