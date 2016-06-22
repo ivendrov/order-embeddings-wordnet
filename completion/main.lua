@@ -58,7 +58,7 @@ require 'optim'
 require 'HypernymScore'
 local config = { learningRate = args.lr }
 
-local hypernymNet = nn.HypernymScore(hyperparams, datasets.slices:size(1))
+local hypernymNet = nn.HypernymScore(hyperparams, datasets.numEntities)
 local criterion = nn.HingeEmbeddingCriterion(args.margin)
 
 ----------------

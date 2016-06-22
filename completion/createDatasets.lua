@@ -6,13 +6,8 @@ local method = 'contrastive'
 local hdf5 = require 'hdf5'
 
 local f = hdf5.open('dataset/wordnet.h5', 'r')
-local word_embeddings = f:read('embeddings'):all()
-local D_word = word_embeddings:size(2)
-local in_w2v = f:read('in_w2v'):all():byte()
 local originalHypernyms = f:read('hypernyms'):all():add(1) -- convert to 1-based indexing
-local entity2word = f:read('entity2word'):all():add(1) -- convert to 1-based indexing
-local slices = f:read('slices'):all():add(1)
-slices[{{}, 2}]:add(-1)
+local numEntities = torch.max(originalHypernyms) 
 f:close()
 print("Loaded data")
 
@@ -24,8 +19,7 @@ local graph = require 'Graph'
 -----
 -- split hypernyms into train, dev, test
 -----
-for _, overfit in ipairs{true, false} do
-    for _, hypernymType in ipairs{'trans', 'notrans'} do
+for _, hypernymType in ipairs{'trans', 'notrans'} do
         local methodName = method
         local hypernyms = originalHypernyms
         if hypernymType == 'trans' then
@@ -42,31 +36,18 @@ for _, overfit in ipairs{true, false} do
         local hypernyms = hypernyms:index(1, order)
         print("Building sets ...")
 
-        local sets
-        if overfit then
-            methodName = methodName .. '_overfit'
-            sets = {
-                train = hypernyms,
-                val1 = hypernyms,
-                val2 = hypernyms
-            }
-        else
-            sets = {
+        local sets = {
                 test = hypernyms:narrow(1, 1, splitSize),
                 val = hypernyms:narrow(1, splitSize + 1, splitSize),
                 train = hypernyms:narrow(1, splitSize*2+ 1, N_hypernyms - 2*splitSize)
             }
-        end
         print("Done. Building Datasets ...")
         local datasets = {}
         for name, hnyms in pairs(sets) do
-            datasets[name] = Dataset(slices:size(1), hnyms, method)
+            datasets[name] = Dataset(numEntities, hnyms, method)
         end
 
-        datasets.word_embeddings = word_embeddings
-        datasets.entity2word = entity2word
-        datasets.slices = slices
-
+	datasets.numEntities = numEntities
 
         -- save visualization info
         local paths = require 'paths'
@@ -81,8 +62,8 @@ for _, overfit in ipairs{true, false} do
 
         torch.save('dataset/' .. methodName .. '.t7', datasets)
         write_json('vis/static/' .. methodName .. '/hypernyms', datasets.train.hypernyms:totable())
-    end
 end
+
 
 
 
