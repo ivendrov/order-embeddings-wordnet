@@ -4,15 +4,15 @@ local argparse = require 'argparse'
 
 parser = argparse('Train a WordNet completion model')
 parser:option '--seed' :description 'random seed' : default '1234' :convert(tonumber)
-parser:option '-d' :description 'dimensionality of embedding space' :default "100" :convert(tonumber)
+parser:option '-d' :description 'dimensionality of embedding space' :default "50" :convert(tonumber)
 parser:option '--epochs' :description 'number of epochs to train for ' :default "1" :convert(tonumber)
 parser:option '--batchsize' :description 'size of minibatch to use' :default "1000" :convert(tonumber)
 parser:option '--eval_freq' :description 'evaluation frequency' :default "100" :convert(tonumber)
-parser:option '--lr' :description 'learning rate' :default "0.1" :convert(tonumber)
-parser:option '--train' :description 'dataset to use for training' :default 'random'
+parser:option '--lr' :description 'learning rate' :default "0.01" :convert(tonumber)
+parser:option '--train' :description 'dataset to use for training' :default 'contrastive_trans'
 parser:option '--eval' :description 'dataset to use for evaluation' :args('*')
-parser:option '--name' :description 'name to use' :default 'anon'
-parser:option '--margin' :description 'size of margin to use for contrastive learning'
+parser:option '--name' :description 'name of model' :default 'anon'
+parser:option '--margin' :description 'size of margin to use for contrastive learning' :default '1' :convert(tonumber)
 parser:option '--norm' :description 'norm to use, "inf" for infinity' :default "2" :convert(tonumber)
 parser:option '--eps' :description 'constant to use to prevent hypernyms from being mapped to the exact same spot' :default "0" :convert(tonumber)
 parser:flag '--symmetric' : description 'use symmetric dot-product distance instance'
@@ -51,7 +51,7 @@ local hyperparams = {
 
 local timestampedName = os.date("%Y-%m-%d_%H-%M-%S") .. "_" .. args.name
 
-require 'logger'
+require 'Log'
 local log = Log(timestampedName, hyperparams, 'vis_training/static', 'Examples Seen', 1)
 
 require 'optim'
