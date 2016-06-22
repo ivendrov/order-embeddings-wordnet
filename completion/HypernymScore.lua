@@ -1,6 +1,5 @@
 require 'nn'
 require 'dpnn'
-require 'FixedLookupTable'
 
 local HypernymScore, parent = torch.class('nn.HypernymScore', 'nn.Sequential')
 
