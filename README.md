@@ -27,3 +27,20 @@ and validation error by navigating to the `vis_training` directory, running
 python -m SimpleHTTPServer
 ```
 and pointing your browser to the server (usually `localhost:8000`).
+
+## Reference
+
+If you found this code useful, please cite the following paper:
+
+Ivan Vendrov, Ryan Kiros, Sanja Fidler, Raquel Urtasun. **"Order-Embeddings of Images and Language."** *arXiv preprint arXiv:1511.06361 (2015).*
+
+    @article{vendrov2015order,
+      title={Order-embeddings of images and language},
+      author={Vendrov, Ivan and Kiros, Ryan and Fidler, Sanja and Urtasun, Raquel},
+      journal={arXiv preprint arXiv:1511.06361},
+      year={2015}
+    }
+
+## License
+
+[Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0)
