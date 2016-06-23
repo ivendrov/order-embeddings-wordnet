@@ -1,5 +1,5 @@
 # order-embeddings-wordnet
-Code for the hypernym completion experiment from the paper ["Order-Embeddings of Images and Language"](http://arxiv.org/abs/1511.06361). See [the other repo](https://github.com/ivendrov/order-embeddings) for the caption-image ranking and textual entailment experiments.
+Code for the hypernym completion experiment from the paper ["Order-Embeddings of Images and Language"](http://arxiv.org/abs/1511.06361). See [the other repo](https://github.com/ivendrov/order-embedding) for the caption-image ranking and textual entailment experiments.
 
 ## Dependencies
 - Python 2 with a recent version of Numpy and [nltk 3.0](http://www.nltk.org/) for easy access to WordNet.
